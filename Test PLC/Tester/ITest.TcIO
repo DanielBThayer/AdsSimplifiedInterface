@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <Itf Name="ITest" Id="{bfd2c572-381c-4242-a790-590066fa0848}">
+    <Declaration><![CDATA[INTERFACE ITest
+]]></Declaration>
+    <Method Name="TestMethod" Id="{a7e91d8c-bcc4-4368-90b6-e02d3960ccc7}">
+      <Declaration><![CDATA[METHOD TestMethod : BOOL
+VAR_INPUT
+END_VAR
+]]></Declaration>
+    </Method>
+  </Itf>
+</TcPlcObject>

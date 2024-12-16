@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_TestBlock" Id="{e27b484d-fa08-4831-aa6b-0b445933cd95}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TestBlock
+VAR_INPUT
+	(* Time between calls to the interface *)
+	delayUpdates : TIME;
+	(* Interface to call when time it over *)
+	interfaceTest : ITest;
+END_VAR
+
+VAR_OUTPUT
+	(* Counter of calls made *)
+	callCount : UINT;
+END_VAR
+
+VAR
+	(* Counter of calls made with a return of TRUE *)
+	trueCallCount : UINT;
+	(* Timer for the call *)
+	callTimer : TON;
+	(* Reference to another Function Block of the same time *)
+	selfTypeReference : REFERENCE TO FB_TestBlock;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* Call the interface every delayUpdates time *)
+callTimer(IN := TRUE, PT := delayUpdates);
+IF callTimer.Q THEN
+	(* Reset the timer and increase the call count *)
+	callTimer(IN := FALSE);
+	callCount := callCount + 1;
+	
+	(* Protect against a bad interface and call the method, increasing trueCallCount if true *)
+	IF interfaceTest <> 0 THEN
+		IF interfaceTest.TestMethod() THEN
+			trueCallCount := trueCallCount + 1;
+		END_IF
+	END_IF
+END_IF]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

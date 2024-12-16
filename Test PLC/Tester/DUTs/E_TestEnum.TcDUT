@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="E_TestEnum" Id="{e8bbe942-eadb-4bfb-9fec-311a2dd23c3f}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+{attribute 'to_string'}
+TYPE E_TestEnum :
+(
+	Idle := 0,
+	Starting,
+	Running,
+	Stopping,
+	Pausing,
+	Paused,
+	Error,
+	ErrorResetting
+) UINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
