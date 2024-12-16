@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FB_InterfaceTest" Id="{28fe76e9-abf0-41b4-92c9-4dc26c68cb8e}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+	Function block to assign to an ITest interface
+*)
+FUNCTION_BLOCK FB_InterfaceTest IMPLEMENTS ITest
+VAR
+	(* Last Value *)
+	oldValue : BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Method Name="TestMethod" Id="{1f73adbc-99da-4c1f-a591-4c55a32e74c2}">
+      <Declaration><![CDATA[(*
+	Test method for the ITest interface
+*)
+METHOD TestMethod : BOOL	(* Inverted value since last call *)
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(* Return the inverted old value and save the inverted value as the new old value *)
+TestMethod := NOT oldValue;
+oldValue := TestMethod;]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="ST_StringForArray" Id="{85d13bd0-d57c-4e92-b932-3870fbfcbe85}">
+    <Declaration><![CDATA[(*
+	Allows direct reading of strings of arrays, inside a structure/function block/program, in a single read from C#
+*)
+TYPE ST_StringForArray :
+STRUCT
+	(* String for array *)
+	str	: STRING;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

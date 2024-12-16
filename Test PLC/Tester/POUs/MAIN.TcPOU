@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="MAIN" Id="{0be89959-27fb-4658-95b3-249248bfd9c7}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	(* Boolean *)
+	boolean : BOOL;
+	(* Integer *)
+	integer	: LINT;
+	(* Unsigned integer *)
+	unsignedInteger : ULINT;
+	(* Real number *)
+	realNumber : REAL;
+	(* Text (80 characters) *)
+	text : STRING;
+	(* Time *)
+	some : TIME;
+	(* Date *)
+	out : DATE;
+	(* Array of text (80 characters each) *)
+	localStringArray : ARRAY [0..10] OF STRING;
+
+	(* Enumeration *)
+	state : E_TestEnum := E_TestEnum.Idle;
+	
+	(* Function Block *)
+	testBlock	: FB_TestBlock;
+	(* Function Block using Interface *)
+	testInterface : FB_InterfaceTest;
+	
+	(* Indirect array of strings *)
+	easyToReadString : ARRAY [0..10] OF ST_StringForArray;
+	
+	(* Union *)
+	item : U_EveryType;
+	
+	(* Windows time *)
+	fbTime   : FB_LocalSystemTime := ( bEnable := TRUE, dwCycle := 1 );
+	(* Windows time zone *)
+	fbTimeZone : FB_GetTimeZoneInformation := (bExecute := TRUE);
+	(* Converts local Windows time to UTC *)
+	fbToUTC : FB_TzSpecificLocalTimeToSystemTime;
+END_VAR
+
+VAR PERSISTENT
+	testCallDelayTime : TIME := T#5s;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* Hidden gem, a quick/cheap way to get a timestamp for log messages for this PLC cycle *)
+fbTime();
+fbTimeZone();
+IF fbtime.bValid AND NOT fbTimeZone.bBusy THEN
+	(* Once the time and time zone are valid, convert system time to UTC *)
+	fbToUTC(in := fbTime.systemTime,
+			tzInfo := fbTimeZone.tzInfo);
+			
+	(* Convert the UTC system time into the ISO8601 format for UTC, fixing the timezone bug in Beckhoff's code *)
+	GVL_System.timestamp := SystemTime_To_ISO8601(systemTime := fbToUTC.out,
+												  nBias := 0,
+												  bUTC := TRUE,
+												  nPrecision := 3);
+	GVL_System.timestamp := REPLACE(GVL_System.timestamp, 'Z',1,24);
+END_IF
+
+(* Run the test function block *)
+testBlock(interfaceTest := testInterface, delayUpdates := testCallDelayTime);
+
+(* Update the union with the new value *)
+item.integer := testBlock.callCount;]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
