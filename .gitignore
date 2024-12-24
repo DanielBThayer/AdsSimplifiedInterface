@@ -3,12 +3,12 @@
 ################################################################################
 
 **/.vs
-/src/obj
-/src/bin
-/Test PLC/Tester/_CompileInfo
-/Test PLC/Tester/_Libraries
-/Test PLC/_Boot
+**/obj
+**/bin
+**/_CompileInfo
+**/_Libraries
+**/_Boot
 *.tmc
 *.~u
 *.bak
-/Test PLC/TrialLicense.tclrs
+*.tclrs
