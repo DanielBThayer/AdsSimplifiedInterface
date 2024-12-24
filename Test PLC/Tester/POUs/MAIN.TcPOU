@@ -31,6 +31,12 @@ VAR
 	(* Indirect array of strings *)
 	easyToReadString : ARRAY [0..10] OF ST_StringForArray;
 	
+	(* Multidiminsional array *)
+	ArrayArray : ARRAY [0..10,0..10] OF BOOL;
+	
+	(* Array of array *)
+	ArrayOfArray : ARRAY [0..10] OF ARRAY [0..10] OF ULINT;
+
 	(* Union *)
 	item : U_EveryType;
 	
