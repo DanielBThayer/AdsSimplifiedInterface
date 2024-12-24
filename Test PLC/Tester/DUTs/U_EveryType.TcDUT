@@ -11,8 +11,6 @@ UNION
 	unsignedInteger : ULINT;
 	(* Real number *)
 	realNumber : LREAL;
-	(* Text (80 characters) *)
-	text : STRING;
 	(* Time *)
 	some : TIME;
 	(* Date *)
