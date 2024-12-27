@@ -4,9 +4,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using TwinCAT;
 using TwinCAT.Ads;
-using TwinCAT.Ads.TypeSystem;
 using TwinCAT.TypeSystem;
-using TwinCAT.TypeSystem.Generic;
 
 namespace AdsSimplifiedInterface
 {
@@ -40,6 +38,10 @@ namespace AdsSimplifiedInterface
         /// Data type creator for creating C# versions of PLC data types
         /// </summary>
         private readonly AdsTypeCreator dataTypeCreater;
+        /// <summary>
+        /// Creator for creating ADS data type information
+        /// </summary>
+        private readonly AdsTypeInfoCreator adsTypeInfoCreator;
         /// <summary>
         /// Mapping of instance paths and their actions to execute when a change is detected
         /// </summary>
@@ -87,6 +89,7 @@ namespace AdsSimplifiedInterface
 
             // Create the data type creator
             dataTypeCreater = new AdsTypeCreator(logger);
+            adsTypeInfoCreator = new AdsTypeInfoCreator(logger);
 
             // Create ADS session
             session = new AdsSession(AmsNetId, Port);
@@ -117,6 +120,7 @@ namespace AdsSimplifiedInterface
 
             // Create the data type creator
             dataTypeCreater = new AdsTypeCreator(logger);
+            adsTypeInfoCreator = new AdsTypeInfoCreator(logger);
 
             // Fetch the configuration from the configuration manager
             amsNetId = config.GetValue<string>("ADS:NetId") ?? string.Empty;
@@ -695,6 +699,32 @@ namespace AdsSimplifiedInterface
         }
 
         /// <summary>
+        /// Get a list of variable information
+        /// </summary>
+        /// <param name="VariableName">Path of the variable to return the variable information for</param>
+        /// <returns>List of variable information found</returns>
+        public List<PlcVariableTypeInfo> GetVariableInfos(string VariableName = "")
+        {
+            if (string.IsNullOrEmpty(VariableName))
+            {
+                // No starting point, so search the entire PLC data type set
+                return [.. GetVariableInfos([.. session.SymbolServer.DataTypes])];
+            }
+            else
+            {
+                // Start at the defined starting point, if it exists
+                ISymbol symbol = session.SymbolServer.Symbols.FindSymbol(VariableName) ?? throw new ArgumentException($"{VariableName} does not exist on the PLC");
+                if (symbol.DataType == null)
+                {
+                    throw new InvalidOperationException($"{VariableName} does not have a valid data type");
+                }
+                return [
+                    adsTypeInfoCreator.CreateType(symbol.DataType)
+                ];
+            }
+        }
+
+        /// <summary>
         /// Internal method for diving deeper into a variable tree during a search
         /// </summary>
         /// <param name="symbols">Symbols to check</param>
@@ -717,8 +747,25 @@ namespace AdsSimplifiedInterface
                     variables.AddRange(GetVariables([.. symbol.SubSymbols], PersistentOnly));
                 }
             }
-            
+
             return [.. variables];
+        }
+
+        /// <summary>
+        /// Internal method for diving deeper into a variable information tree during a search
+        /// </summary>
+        /// <param name="dataTypes">Data type information to process</param>
+        /// <returns>Array of variable information found</returns>
+        private PlcVariableTypeInfo[] GetVariableInfos(List<IDataType> dataTypes)
+        {
+            List<PlcVariableTypeInfo> variableInfos = [];
+
+            foreach (IDataType dataType in dataTypes)
+            {
+                variableInfos.Add(adsTypeInfoCreator.CreateType(dataType));
+            }
+
+            return [.. variableInfos];
         }
         #endregion
 
