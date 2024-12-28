@@ -6,3 +6,6 @@ PLC for testing out the ADS interface.  There are multiple data types included a
 
 # Test Client
 WinUI client using the library as a test/example
+
+# Test Console
+C# console app using the library as a test/example
