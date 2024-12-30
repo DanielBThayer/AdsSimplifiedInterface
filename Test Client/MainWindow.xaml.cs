@@ -65,8 +65,9 @@ namespace Test_Client
         /// </summary>
         /// <param name="sender">Object selecting the variable</param>
         /// <param name="args">Parameters of the selection</param>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Required by API")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Required by Event API")]
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Bug in VS doesn't see usage in MainWindow.xaml")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0079:Remove unnecessary suppression", Justification = "Bug in VS doesn't see the need for suppression when the item needing it is suppressed")]
         private void TvVariables_Tapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
             if (tvVariables.SelectedItem != null)

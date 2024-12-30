@@ -1,6 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using AdsSimplifiedInterface.Attributes;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Data;
 using System.Reflection;
 using TwinCAT;
 using TwinCAT.Ads;
@@ -65,6 +67,10 @@ namespace AdsSimplifiedInterface
         /// Indicates if the object is disposed
         /// </summary>
         private bool disposedValue;
+        /// <summary>
+        /// Method for setting a value in the PLC, using the generic SetValue method
+        /// </summary>
+        private readonly MethodInfo _SetValue = typeof(AdsInterface).GetMethods(BindingFlags.Public | BindingFlags.Instance).Where(static s => s.Name.Equals("SetValue", StringComparison.OrdinalIgnoreCase) && s.ContainsGenericParameters).First();
         #endregion
 
         #region Constructors
@@ -163,7 +169,7 @@ namespace AdsSimplifiedInterface
             {
                 return;
             }
-            if (!session.IsConnected || session.ConnectionState != ConnectionState.Connected)
+            if (!session.IsConnected || session.ConnectionState != TwinCAT.ConnectionState.Connected)
             {
                 return;
             }
@@ -267,14 +273,14 @@ namespace AdsSimplifiedInterface
 
             switch (e.NewState)
             {
-                case ConnectionState.Lost:
-                case ConnectionState.None:
-                case ConnectionState.Disconnected:
+                case TwinCAT.ConnectionState.Lost:
+                case TwinCAT.ConnectionState.None:
+                case TwinCAT.ConnectionState.Disconnected:
                     // Clear all internal cache, the PLC might be changing
                     dataTypeCreater.ResetCache();
                     symbolCache.Clear();
                     break;
-                case ConnectionState.Connected:
+                case TwinCAT.ConnectionState.Connected:
                     // Re-validate notifications, removing ones that don't exist anymore
                     long currentScanTime = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
                     ConcurrentBag<string> deadVariables = [];
@@ -440,6 +446,47 @@ namespace AdsSimplifiedInterface
 
         #region Read Access
         /// <summary>
+        /// Tries to get the value of the PLC variable
+        /// </summary>
+        /// <param name="InstancePath">PLC variable path</param>
+        /// <param name="value">Value from the PLC</param>
+        /// <returns>True if successful, otherwise false</returns>
+        public bool TryGetValue(string InstancePath, out object? value)
+        {
+            try
+            {
+                value = GetValue(InstancePath);
+                return true;
+            }
+            catch
+            {
+                value = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Tries to get the value of the PLC variable
+        /// </summary>
+        /// <typeparam name="T">Data type of the PLC variable</typeparam>
+        /// <param name="InstancePath">PLC variable path</param>
+        /// <param name="value">Value from the PLC</param>
+        /// <returns>True if successful, otherwise false</returns>
+        public bool TryGetValue<T>(string InstancePath, out T? value)
+        {
+            try
+            {
+                value = GetValue<T>(InstancePath);
+                return true;
+            }
+            catch
+            {
+                value = default;
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Gets the value of the PLC variable
         /// </summary>
         /// <typeparam name="T">Data type of the PLC variable</typeparam>
@@ -582,6 +629,45 @@ namespace AdsSimplifiedInterface
 
         #region Write Access
         /// <summary>
+        /// Attempt to write a value to the variable
+        /// </summary>
+        /// <param name="InstancePath">Path to the variable</param>
+        /// <param name="value">Value to write</param>
+        /// <returns>True if successful, otherwise false</returns>
+        public bool TrySetValue(string InstancePath, object value)
+        {
+            try
+            {
+                SetValue(InstancePath, value);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Attempt to write a value to the variable
+        /// </summary>
+        /// <typeparam name="T">Type of the variable</typeparam>
+        /// <param name="InstancePath">Path to the variable</param>
+        /// <param name="value">Value to write</param>
+        /// <returns>True if successful, otherwise false</returns>
+        public bool TrySetValue<T>(string InstancePath, T value) where T : notnull
+        {
+            try
+            {
+                SetValue(InstancePath, value);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Write the value to the variable
         /// </summary>
         /// <typeparam name="T">Type of the variable</typeparam>
@@ -592,8 +678,36 @@ namespace AdsSimplifiedInterface
             // Validate variable path
             ISymbol symbol = CheckInstancePath(InstancePath);
 
-            // Send the value
-            ((IValueSymbol)symbol).WriteValue(value);
+            // Handle writing the data depending on the attributes on the type
+            if (typeof(T).IsDefined(typeof(ReadOnlyAttribute)))
+            {
+                logger.LogError($"Attempt to write to a read-only variable: {InstancePath}");
+                throw new ReadOnlyException($"Attempt to write to a read-only variable: {InstancePath}");
+            }
+            else if (typeof(T).IsDefined(typeof(BlockWriteNotAllowedAttribute)))
+            {
+                // Send the value of the members
+                foreach (FieldInfo field in typeof(T).GetFields())
+                {
+                    if (field.IsDefined(typeof(ReadOnlyAttribute)))
+                    {
+                        continue;
+                    }
+
+                    // Write the value
+                    var fieldValue = field.GetValue(value);
+
+                    if (fieldValue != null)
+                    {
+                        SetValue($"{InstancePath}.{field.Name}", fieldValue);
+                    }
+                }
+            }
+            else
+            {
+                // Send the value
+                ((IValueSymbol)symbol).WriteValue(value);
+            }
         }
 
         /// <summary>
@@ -617,8 +731,9 @@ namespace AdsSimplifiedInterface
                 throw new InvalidOperationException($"Data type mismatch.  Symbol is of {symbol.DataType.Name} and value if of {value.GetType().Name}");
             }
 
-            // Send the value
-            ((IValueSymbol)symbol).WriteValue(value);
+            // Create and invoke the generic SetValue method
+            MethodInfo setValue = _SetValue.MakeGenericMethod(symbolType);
+            setValue.Invoke(this, [InstancePath, value]);
         }
         #endregion
 

@@ -18,6 +18,7 @@ VAR
 	(* Counter of calls made with a return of TRUE *)
 	trueCallCount : UINT;
 	(* Timer for the call *)
+	{attribute 'ReadOnly'}
 	callTimer : TON;
 	(* Reference to another Function Block of the same time *)
 	selfTypeReference : REFERENCE TO FB_TestBlock;

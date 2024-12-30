@@ -132,7 +132,7 @@ namespace AdsSimplifiedInterface
                 memberInfo.DataType = memberInfo.Name;
                 memberInfo.Name = member.InstanceName;
                 plcVariableTypeInfo.Children.Add(memberInfo);
-                plcVariableTypeInfo.IsBlockWriteAllowed &= memberInfo.IsBlockWriteAllowed;
+                plcVariableTypeInfo.IsBlockWriteAllowed &= memberInfo.IsBlockWriteAllowed && !memberInfo.IsReadOnly;
 
                 _logger.LogDebug($"{member.InstancePath} added with next offset at {member.ByteOffset}");
             }
