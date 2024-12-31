@@ -2,6 +2,7 @@
 <TcPlcObject Version="1.1.0.1">
   <GVL Name="GVL_System" Id="{c3d8c51c-fae2-4924-8fe6-cd72cb5635bb}">
     <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'NotBlockWritable'}
 VAR_GLOBAL
 	(* Timestamp for cycle in ISO 8601 format (yyyy-MM-ddTHH:mm:ss.fffZ) *)
 	timestamp : STRING(24);

@@ -497,12 +497,25 @@ namespace AdsSimplifiedInterface
             // Validate variable path
             ISymbol symbol = CheckInstancePath(InstancePath);
 
-            // Convert the to value type
-            IValueSymbol value = (IValueSymbol)symbol;
+            if (typeof(T) == typeof(string[]))
+            {
+                List<string> values = [];
+                foreach (ISymbol subsymbol in symbol.SubSymbols)
+                {
+                    values.Add(GetValue<string>($"{subsymbol.InstancePath}"));
+                }
 
-            // Return the value from the PLC
-            return value.ReadRawValue()
-                        .CastByBytes<T>();
+                return (T)(object)values.ToArray();
+            }
+            else
+            {
+                // Convert the to value type
+                IValueSymbol value = (IValueSymbol)symbol;
+
+                // Return the value from the PLC
+                return value.ReadRawValue()
+                            .CastByBytes<T>();
+            }
         }
 
         /// <summary>
@@ -683,6 +696,15 @@ namespace AdsSimplifiedInterface
             {
                 logger.LogError($"Attempt to write to a read-only variable: {InstancePath}");
                 throw new ReadOnlyException($"Attempt to write to a read-only variable: {InstancePath}");
+            }
+            else if (typeof(string[]) == typeof(T))
+            {
+                // Write the array of strings
+                string[] values = (string[])(object)value;
+                for (int i = 0; i < values.Length; i++)
+                {
+                    SetValue($"{InstancePath}[i]", values[i]);
+                }
             }
             else if (typeof(T).IsDefined(typeof(BlockWriteNotAllowedAttribute)))
             {

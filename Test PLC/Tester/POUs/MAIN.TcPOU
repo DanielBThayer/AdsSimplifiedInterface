@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1">
   <POU Name="MAIN" Id="{0be89959-27fb-4658-95b3-249248bfd9c7}" SpecialFunc="None">
-    <Declaration><![CDATA[PROGRAM MAIN
+    <Declaration><![CDATA[{attribute 'NotBlockWritable'}
+PROGRAM MAIN
 VAR
 	(* Boolean *)
 	boolean : BOOL;
@@ -41,10 +42,13 @@ VAR
 	item : U_EveryType;
 	
 	(* Windows time *)
+	{attribute 'NotBlockWritable'}
 	fbTime   : FB_LocalSystemTime := ( bEnable := TRUE, dwCycle := 1 );
 	(* Windows time zone *)
+	{attribute 'NotBlockWritable'}
 	fbTimeZone : FB_GetTimeZoneInformation := (bExecute := TRUE);
 	(* Converts local Windows time to UTC *)
+	{attribute 'NotBlockWritable'}
 	fbToUTC : FB_TzSpecificLocalTimeToSystemTime;
 END_VAR
 

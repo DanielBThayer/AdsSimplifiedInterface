@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1">
   <POU Name="FB_TestBlock" Id="{e27b484d-fa08-4831-aa6b-0b445933cd95}" SpecialFunc="None">
-    <Declaration><![CDATA[FUNCTION_BLOCK FB_TestBlock
+    <Declaration><![CDATA[{attribute 'NotBlockWritable'}
+FUNCTION_BLOCK FB_TestBlock
 VAR_INPUT
 	(* Time between calls to the interface *)
 	delayUpdates : TIME;

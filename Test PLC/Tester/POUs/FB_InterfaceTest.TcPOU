@@ -4,6 +4,7 @@
     <Declaration><![CDATA[(*
 	Function block to assign to an ITest interface
 *)
+{attribute 'NotBlockWritable'}
 FUNCTION_BLOCK FB_InterfaceTest IMPLEMENTS ITest
 VAR
 	(* Last Value *)

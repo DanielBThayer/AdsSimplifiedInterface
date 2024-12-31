@@ -175,7 +175,7 @@ namespace AdsSimplifiedInterface
                     field.SetCustomAttribute(new CustomAttributeBuilder(_readOnlyAttribute, []));
                     BlockWriteNotAllowed = true;
                 }
-                else if (ReadOnlyVariable(member.DataType))
+                else if (ReadOnlyVariable(member.DataType) || member.Attributes.Contains("NotBlockWritable") || field.FieldType.IsDefined(typeof(BlockWriteNotAllowedAttribute)))
                 {
                     BlockWriteNotAllowed = true;
                 }
@@ -195,7 +195,7 @@ namespace AdsSimplifiedInterface
             }
 
             // Check if the structure is block writable or not
-            if (BlockWriteNotAllowed)
+            if (BlockWriteNotAllowed || dataType.Attributes.Contains("NotBlockWritable"))
             {
                 builder.SetCustomAttribute(new CustomAttributeBuilder(_blockWriteNotAllowedAttribute, []));
             }
@@ -557,6 +557,11 @@ namespace AdsSimplifiedInterface
                 if (value.ElementType!.Name.Equals("bool", StringComparison.OrdinalIgnoreCase))
                 {
                     fieldBuilder.SetCustomAttribute(new CustomAttributeBuilder(_marshalType, [UnmanagedType.ByValArray], [_marshalConstSize, _marshalSubType], [dataType.ByteSize / value.ElementType!.ByteSize, UnmanagedType.I1]));
+                }
+                else if (value.ElementType is IStringType)
+                {
+                    // Blocks group write operations because there is no way to do this for string arrays
+                    fieldBuilder.SetCustomAttribute(new CustomAttributeBuilder(_blockWriteNotAllowedAttribute, []));
                 }
                 else
                 {
