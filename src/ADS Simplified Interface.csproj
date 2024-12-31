@@ -4,7 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <FileVersion>1.0.0.0</FileVersion>
     <Version>1.0.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <RootNamespace>AdsSimplifiedInterface</RootNamespace>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>AdsSimplifiedInterface</PackageId>
@@ -16,6 +18,8 @@
     <PackageTags>TwinCAT;ADS</PackageTags>
     <Description>A library for simplifying access to a TwinCAT PLC over ADS</Description>
     <IsPublishable>False</IsPublishable>
+    <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
