@@ -1,0 +1,61 @@
+name: .NET Nuget Publish And Version Bump
+on:
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      Solution_Name: "src\\ADS Simplified Interface.sln"
+      Project: "src\\ADS Simplified Interface.csproj"
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    # Add  MSBuild to the PATH: https://github.com/microsoft/setup-msbuild
+    - name: Setup MSBuild.exe
+      uses: microsoft/setup-msbuild@v2
+
+    # Restore the application to populate the obj folder with RuntimeIdentifiers
+    - name: Restore the application
+      run: msbuild $env:Solution_Name /t:Restore /p:Configuration=Release
+
+    # Create the app package by building and packaging the Windows Application Packaging project
+    - name: Create the app package
+      run: msbuild /p:Configuration=Release
+
+    # Upload to NuGet.org
+    - name: Push Package to NuGet.org
+      run: dotnet nuget push *.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+
+    # Version Bump
+    - name: Version Bump
+      shell: powershell
+      run: |
+        $xml = [Xml] (Get-Content `$env:Project`)
+        $version = $xml.Project.PropertyGroup.Version
+        $versionParts = $version.split(".")
+        $versionParts[-1] = [string]([int]($versionParts[-1]) + 1)
+        $ofs='.'
+        $newVersion = [string]$versionParts
+        $xml.Project.PropertyGroup.Version = $newVersion
+        $xml.Project.PropertyGroup.FileVersion = $newVersion
+        $xml.Project.PropertyGroup.AssemblyVersion = $newVersion
+        $xml.Save($env:Project)
+
+    - name: Git Commit/Push Changes
+      uses: actions-x/commit@v6
+      with:
+        # The commit message
+        message: "Version Bump"
