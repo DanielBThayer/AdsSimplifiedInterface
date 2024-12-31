@@ -8,7 +8,6 @@ jobs:
   build:
     runs-on: windows-latest
     env:
-      Solution_Name: "src\\ADS Simplified Interface.sln"
       Project: "src\\ADS Simplified Interface.csproj"
 
     steps:
@@ -37,7 +36,7 @@ jobs:
 
     # Upload to NuGet.org
     - name: Push Package to NuGet.org
-      run: dotnet nuget push *.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push **/*.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
 
     # Version Bump
     - name: Version Bump
