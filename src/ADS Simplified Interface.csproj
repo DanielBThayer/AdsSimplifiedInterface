@@ -1,12 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Version>1.0.0.0</Version>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.1</FileVersion>
+    <Version>1.0.0.1</Version>
+    <AssemblyVersion>1.0.0.1</AssemblyVersion>
     <RootNamespace>AdsSimplifiedInterface</RootNamespace>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageId>AdsSimplifiedInterface</PackageId>
@@ -21,7 +20,6 @@
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
   </PropertyGroup>
-
   <ItemGroup>
     <None Include="..\README.md">
       <Pack>True</Pack>
@@ -32,12 +30,10 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="Beckhoff.TwinCAT.Ads" Version="6.1.312" />
     <PackageReference Include="Beckhoff.TwinCAT.Ads.Reactive" Version="6.1.312" />
     <PackageReference Include="Beckhoff.TwinCAT.Ads.TcpRouter" Version="6.1.312" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
   </ItemGroup>
-
 </Project>
