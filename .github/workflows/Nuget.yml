@@ -41,7 +41,7 @@ jobs:
     # Version Bump
     - name: Version Bump
       shell: powershell
-      run: VersionBump.ps1
+      run: .\VersionBump.ps1
 
     - name: Git Commit/Push Changes
       uses: actions-x/commit@v6
