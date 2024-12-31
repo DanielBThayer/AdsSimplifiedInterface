@@ -44,7 +44,7 @@ jobs:
       run: .\VersionBump.ps1
 
     - name: Git Commit/Push Changes
-      uses: actions-x/commit@v6
+      uses: GuillaumeFalourd/git-commit-push@v1.3
       with:
         # The commit message
-        message: "Version Bump"
+        commit_message: "Version Bump"
