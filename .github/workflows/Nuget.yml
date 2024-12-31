@@ -36,7 +36,7 @@ jobs:
 
     # Upload to NuGet.org
     - name: Push Package to NuGet.org
-      run: dotnet nuget push **/*.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push **/*.nupkg -k ${{ secrets.NUGETAPIKEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
 
     # Version Bump
     - name: Version Bump
