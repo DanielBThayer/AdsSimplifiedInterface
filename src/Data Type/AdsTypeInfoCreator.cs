@@ -107,7 +107,7 @@ namespace AdsSimplifiedInterface
                 Size = dataType.ByteSize,
                 Offset = 0,
                 DataType = dataType.Name,
-                IsBlockWriteAllowed = !(dataType.Category == DataTypeCategory.FunctionBlock || dataType.Category == DataTypeCategory.Program),
+                IsBlockWriteAllowed = !(dataType.Category == DataTypeCategory.FunctionBlock || dataType.Category == DataTypeCategory.Program) && !dataType.Attributes.Contains("NotBlockWritable"),
                 Comment = dataType.Comment,
                 Attributes = dataType.Attributes.ToDictionary(x => x.Name, x => x.Value)
             };
@@ -132,7 +132,7 @@ namespace AdsSimplifiedInterface
                 memberInfo.DataType = memberInfo.Name;
                 memberInfo.Name = member.InstanceName;
                 plcVariableTypeInfo.Children.Add(memberInfo);
-                plcVariableTypeInfo.IsBlockWriteAllowed &= memberInfo.IsBlockWriteAllowed;
+                plcVariableTypeInfo.IsBlockWriteAllowed &= memberInfo.IsBlockWriteAllowed && !memberInfo.IsReadOnly;
 
                 _logger.LogDebug($"{member.InstancePath} added with next offset at {member.ByteOffset}");
             }
@@ -171,6 +171,8 @@ namespace AdsSimplifiedInterface
                 IsArray = true,
                 ArraySize = dataType.ByteSize / dataType.ElementType.ByteSize,
                 Comment = dataType.Comment,
+                IsReadOnly = dataType.Attributes.Contains("ReadOnly") || dataType.ElementType.Attributes.Contains("ReadOnly"),
+                IsBlockWriteAllowed = !(dataType.Attributes.Contains("NotBlockWritable") || dataType.Attributes.Contains("ReadOnly") || dataType.ElementType.Attributes.Contains("NotBlockWritable") || dataType.ElementType.Attributes.Contains("ReadOnly") || dataType.ElementType.Category == DataTypeCategory.String),
                 Attributes = dataType.Attributes.ToDictionary(x => x.Name, x => x.Value)
             };
             type.DataType += "[]";
@@ -237,6 +239,8 @@ namespace AdsSimplifiedInterface
                 IsEnum = true,
                 DataType = "enum",
                 Comment = dataType.Comment,
+                IsReadOnly = dataType.Attributes.Contains("ReadOnly"),
+                IsBlockWriteAllowed = !(dataType.Attributes.Contains("NotBlockWritable") || dataType.Attributes.Contains("ReadOnly")),
                 Attributes = dataType.Attributes.ToDictionary(x => x.Name, x => x.Value)
             };
 
@@ -379,6 +383,8 @@ namespace AdsSimplifiedInterface
             {
                 DataType = dataType.Name,
                 Comment = dataType.Comment,
+                IsReadOnly = dataType.Attributes.Contains("ReadOnly") || dataType.BaseType.Attributes.Contains("ReadOnly"),
+                IsBlockWriteAllowed = !(dataType.Attributes.Contains("NotBlockWritable") || dataType.Attributes.Contains("ReadOnly") || dataType.BaseType.Attributes.Contains("NotBlockWritable") || dataType.BaseType.Attributes.Contains("ReadOnly")),
                 Attributes = dataType.Attributes.ToDictionary(x => x.Name, x => x.Value)
             };
             _cache[dataType.FullName] = type;
@@ -599,6 +605,8 @@ namespace AdsSimplifiedInterface
                 PlcVariableTypeInfo memberInfo = new(CreateType(member.DataType))
                 {
                     Offset = 0,
+                    IsReadOnly = member.Attributes.Contains("ReadOnly"),
+                    IsBlockWriteAllowed = !(member.Attributes.Contains("NotBlockWritable") || member.Attributes.Contains("ReadOnly")),
                     Comment = member.Comment
                 };
                 memberInfo.DataType = memberInfo.Name;
@@ -642,6 +650,8 @@ namespace AdsSimplifiedInterface
             {
                 DataType = dataType.Name,
                 Comment = dataType.Comment,
+                IsReadOnly = dataType.Attributes.Contains("ReadOnly") || dataType.BaseType.Attributes.Contains("ReadOnly"),
+                IsBlockWriteAllowed = !(dataType.Attributes.Contains("NotBlockWritable") || dataType.Attributes.Contains("ReadOnly") || dataType.BaseType.Attributes.Contains("NotBlockWritable") || dataType.BaseType.Attributes.Contains("ReadOnly")),
                 Attributes = dataType.Attributes.ToDictionary(x => x.Name, x => x.Value)
             };
             _cache[dataType.FullName] = type;

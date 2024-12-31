@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using AdsSimplifiedInterface.Attributes;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -33,6 +34,14 @@ namespace AdsSimplifiedInterface
         /// Constructor for adding MarshalAs(marshalType)
         /// </summary>
         private readonly ConstructorInfo _marshalType = typeof(MarshalAsAttribute).GetConstructor([typeof(UnmanagedType)]) ?? throw new InvalidOperationException("MarshalAs doesn't define a constructor with just the unmanaged type");
+        /// <summary>
+        /// Constructor for adding MarshalAs(marshalType)
+        /// </summary>
+        private readonly ConstructorInfo _readOnlyAttribute = typeof(ReadOnlyAttribute).GetConstructor([]) ?? throw new InvalidOperationException("Read Only Attribute doesn't define a constructor with just the unmanaged type");
+        /// <summary>
+        /// Constructor for adding MarshalAs(marshalType)
+        /// </summary>
+        private readonly ConstructorInfo _blockWriteNotAllowedAttribute = typeof(BlockWriteNotAllowedAttribute).GetConstructor([]) ?? throw new InvalidOperationException("Block Write Not Allowed Attribute doesn't define a constructor with just the unmanaged type");
         /// <summary>
         /// Constant size field of the MarshalAs attribute
         /// </summary>
@@ -75,6 +84,13 @@ namespace AdsSimplifiedInterface
             if (_cache.TryGetValue(dataType.FullName, out Type? value))
             {
                 return value;
+            }
+
+            // Search the defined types
+            if (Type.GetType(dataType.FullName) is Type systemType)
+            {
+                _cache[dataType.FullName] = systemType;
+                return systemType;
             }
 
             _logger.LogDebug($"Starting {dataType.FullName} creation");
@@ -120,10 +136,14 @@ namespace AdsSimplifiedInterface
 
             _logger.LogDebug($"Starting {dataType.FullName} structure creation");
 
+            // Create the structure
             TypeBuilder builder = _moduleBuilder.DefineType(dataType.Name, TypeAttributes.SequentialLayout);
 
+            // Add the members
+            bool BlockWriteNotAllowed = false;
             int offset = 0;
             int alignment;
+            int alignmentNumber = 1;
             foreach (IMember member in dataType.Members)
             {
                 _logger.LogDebug($"Starting {member.InstancePath} addition");
@@ -140,13 +160,25 @@ namespace AdsSimplifiedInterface
                 if (alignment > 0)
                 {
                     _logger.LogDebug($"Adding a {alignment} alignment before {member.InstancePath}");
-                    CreateAlignment(alignment, ref builder);
+                    CreateAlignment(alignment, alignmentNumber, ref builder);
+                    alignmentNumber++;
                     offset += alignment;
                 }
 
                 // Create the field
                 FieldBuilder field = builder.DefineField(member.InstanceName, CreateType(member.DataType), FieldAttributes.Public);
                 SetAttributes(member.DataType, ref field);
+
+                // Check if the field is read only
+                if (member.Attributes.Contains("ReadOnly"))
+                {
+                    field.SetCustomAttribute(new CustomAttributeBuilder(_readOnlyAttribute, []));
+                    BlockWriteNotAllowed = true;
+                }
+                else if (ReadOnlyVariable(member.DataType) || member.Attributes.Contains("NotBlockWritable") || field.FieldType.IsDefined(typeof(BlockWriteNotAllowedAttribute)))
+                {
+                    BlockWriteNotAllowed = true;
+                }
 
                 // Update offset
                 offset += member.ByteSize;
@@ -159,7 +191,19 @@ namespace AdsSimplifiedInterface
             if (alignment > 0)
             {
                 _logger.LogDebug($"Adding a {alignment} alignment at the end of {dataType.FullName}");
-                CreateAlignment(alignment, ref builder);
+                CreateAlignment(alignment, alignmentNumber, ref builder);
+            }
+
+            // Check if the structure is block writable or not
+            if (BlockWriteNotAllowed || dataType.Attributes.Contains("NotBlockWritable"))
+            {
+                builder.SetCustomAttribute(new CustomAttributeBuilder(_blockWriteNotAllowedAttribute, []));
+            }
+
+            // Check if the structure is read only
+            if (ReadOnlyVariable(dataType))
+            {
+                builder.SetCustomAttribute(new CustomAttributeBuilder(_readOnlyAttribute, []));
             }
 
             // Cache the type and return
@@ -185,8 +229,10 @@ namespace AdsSimplifiedInterface
 
             _logger.LogDebug($"Starting {dataType.FullName} array creation");
 
+            // Create the element type
             IDataType elementType = dataType.ElementType ?? throw new InvalidOperationException($"{dataType.FullName} does not have an element data type");
 
+            // Create the array type, cache, and return
             Type type = CreateType(elementType).MakeArrayType();
             _cache[dataType.FullName] = type;
             return type;
@@ -236,8 +282,10 @@ namespace AdsSimplifiedInterface
 
             _logger.LogDebug($"Starting {dataType.FullName} enum creation");
 
+            // Build the enumeration
             EnumBuilder builder = _moduleBuilder.DefineEnum(dataType.Name, TypeAttributes.Public, CreateType(dataType.BaseType ?? throw new InvalidOperationException($"{dataType.FullName} does not have an underlying type")));
 
+            // Add the values
             foreach (IEnumValue enumValue in dataType.EnumValues)
             {
                 _logger.LogDebug($"Starting {enumValue.Name} addition");
@@ -434,8 +482,10 @@ namespace AdsSimplifiedInterface
 
             _logger.LogDebug($"Starting {dataType.FullName} union creation");
 
+            // Build the union
             TypeBuilder builder = _moduleBuilder.DefineType(dataType.Name, TypeAttributes.ExplicitLayout);
 
+            // Fetch the members and add them to the union
             foreach (IField member in dataType.Fields)
             {
                 _logger.LogDebug($"Starting {member.InstancePath} addition");
@@ -447,12 +497,17 @@ namespace AdsSimplifiedInterface
                     continue;
                 }
 
-                // Create the field
+                // Protect against invalid types
                 if (member.DataType is IStringType)
                 {
                     throw new NotImplementedException($"{member.InstancePath} is not able to be handled right now because it is a string and C# doesn't like unions with strings");
                 }
+                if (ReadOnlyVariable(member.DataType))
+                {
+                    throw new InvalidOperationException($"{member.InstancePath} is not valid because the member's type is read only");
+                }
 
+                // Create the field and add attributes
                 FieldBuilder field = builder.DefineField(member.InstanceName, CreateType(member.DataType), FieldAttributes.Public);
                 SetAttributes(member.DataType, ref field);
                 field.SetOffset(0);
@@ -496,11 +551,17 @@ namespace AdsSimplifiedInterface
         /// <param name="fieldBuilder">Field to marshal</param>
         private void SetAttributes(IDataType dataType, ref FieldBuilder fieldBuilder)
         {
+            // Handle Marshalling for the field
             if (dataType is IArrayType value)
             {
                 if (value.ElementType!.Name.Equals("bool", StringComparison.OrdinalIgnoreCase))
                 {
                     fieldBuilder.SetCustomAttribute(new CustomAttributeBuilder(_marshalType, [UnmanagedType.ByValArray], [_marshalConstSize, _marshalSubType], [dataType.ByteSize / value.ElementType!.ByteSize, UnmanagedType.I1]));
+                }
+                else if (value.ElementType is IStringType)
+                {
+                    // Blocks group write operations because there is no way to do this for string arrays
+                    fieldBuilder.SetCustomAttribute(new CustomAttributeBuilder(_blockWriteNotAllowedAttribute, []));
                 }
                 else
                 {
@@ -518,14 +579,21 @@ namespace AdsSimplifiedInterface
             {
                 fieldBuilder.SetCustomAttribute(new CustomAttributeBuilder(_marshalType, [UnmanagedType.ByValTStr], [_marshalConstSize], [dataType.ByteSize]));
             }
+
+            // Handle read-only fields
+            if (ReadOnlyVariable(dataType))
+            {
+                fieldBuilder.SetCustomAttribute(new CustomAttributeBuilder(_readOnlyAttribute, []));
+            }
         }
 
         /// <summary>
         /// Creates an alignment entry into the data type
         /// </summary>
         /// <param name="Size">Size of the alignment</param>
+        /// <param name="AlignmentNumber">Number of the alignment</param>
         /// <param name="typeBuilder">Type builder to add the alignment to</param>
-        private void CreateAlignment(int Size, ref TypeBuilder typeBuilder)
+        private void CreateAlignment(int Size, int AlignmentNumber, ref TypeBuilder typeBuilder)
         {
             if (Size == 0)
             {
@@ -533,14 +601,29 @@ namespace AdsSimplifiedInterface
             }
             else if (Size == 1)
             {
-                typeBuilder.DefineField("Alignment" + Guid.NewGuid().ToString(), typeof(byte), FieldAttributes.Private);
+                typeBuilder.DefineField("Alignment" + AlignmentNumber.ToString(), typeof(byte), FieldAttributes.Private);
                 return;
             }
             else
             {
-                FieldBuilder fieldBuilder = typeBuilder.DefineField("Alignment" + Guid.NewGuid().ToString(), typeof(byte[]), FieldAttributes.Private);
+                FieldBuilder fieldBuilder = typeBuilder.DefineField("Alignment" + AlignmentNumber.ToString(), typeof(byte[]), FieldAttributes.Private);
                 fieldBuilder.SetCustomAttribute(new CustomAttributeBuilder(_marshalType, [UnmanagedType.ByValArray], [_marshalConstSize], [Size]));
             }
+        }
+
+        /// <summary>
+        /// Determines if a variable is read-only
+        /// </summary>
+        /// <param name="dataType">Data type information</param>
+        /// <returns>True if the variable is a read only variable</returns>
+        public static bool ReadOnlyVariable(IDataType? dataType)
+        {
+            if (dataType == null)
+            {
+                return false;
+            }
+
+            return dataType.Attributes.Contains("ReadOnly") || (dataType is IInterfaceType && dataType is not IStructType) || dataType is IPointerType || dataType is IReferenceType;
         }
         #endregion
     }
