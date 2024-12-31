@@ -41,17 +41,7 @@ jobs:
     # Version Bump
     - name: Version Bump
       shell: powershell
-      run: |
-        $xml = [Xml] (Get-Content `$env:Project`)
-        $version = $xml.Project.PropertyGroup.Version
-        $versionParts = $version.split(".")
-        $versionParts[-1] = [string]([int]($versionParts[-1]) + 1)
-        $ofs='.'
-        $newVersion = [string]$versionParts
-        $xml.Project.PropertyGroup.Version = $newVersion
-        $xml.Project.PropertyGroup.FileVersion = $newVersion
-        $xml.Project.PropertyGroup.AssemblyVersion = $newVersion
-        $xml.Save($env:Project)
+      run: VersionBump.ps1
 
     - name: Git Commit/Push Changes
       uses: actions-x/commit@v6
